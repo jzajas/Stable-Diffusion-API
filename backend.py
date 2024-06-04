@@ -1,43 +1,73 @@
+import base64
+import requests
 import os
-import io
-import warnings
-from PIL import Image
-from stability_sdk import client
-import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
+from tkinter import *
+from PIL import Image, ImageTk
 
-os.environ['STABILITY_HOST'] = 'grpc.stability.ai:443'
+URL = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
+API_KEY = os.environ['STABILITY_KEY']
 
-PROMPT = (
-    "4 dog in mafia suits and sunglasses playing poker in a small room with lamp above their heads as the only source of light"
-)
 
-stability_api = client.StabilityInference(
-    key=os.environ['STABILITY_KEY'],
-    verbose=True,
-    engine="stable-diffusion-xl-1024-v1-0",
-    # available engines: https://platform.stability.ai/docs/features/api-parameters#engine
-)
+def api_call(steps, width, height, seed, cfg_scale, style_preset, text_prompt):
+    body = {
+        "steps": int(steps),
+        "width": int(width),
+        "height": int(height),
+        "seed": int(seed),
+        "cfg_scale": float(cfg_scale),
+        "samples": 1,
+        "style_preset": style_preset,
+        "text_prompts": [
+            {
+                "text": text_prompt,
+                "weight": 1
+            },
+            {
+                "text": "bad, blurry",
+                "weight": -1
+            }
+        ],
+    }
 
-answers = stability_api.generate(
-    prompt=PROMPT,
-    style_preset="cinematic",
-    seed=0,
-    steps=50,
-    cfg_scale=8.0,
-    width=1024,
-    height=1024,
-    samples=1,
-    sampler=generation.SAMPLER_K_DPMPP_2M,
-    # Available Samplers: ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral,
-    # k_dpmpp_2s_ancestral, k_lms, k_dpmpp_2m, k_dpmpp_sde)
-)
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {API_KEY}",
+    }
 
-for resp in answers:
-    for artifact in resp.artifacts:
-        if artifact.finish_reason == generation.FILTER:
-            warnings.warn(
-                "Your request activated the API's safety filters and could not be processed."
-                "Please modify the prompt and try again.")
-        if artifact.type == generation.ARTIFACT_IMAGE:
-            img = Image.open(io.BytesIO(artifact.binary))
-            img.save(str(artifact.seed) + ".png")
+    response = requests.post(
+        URL,
+        headers=headers,
+        json=body,
+    )
+
+    if response.status_code != 200:
+        raise Exception("Non-200 response: " + str(response.text))
+
+    data = response.json()
+
+    # make sure the out directory exists
+    if not os.path.exists("./out"):
+        os.makedirs("./out")
+
+    for i, image in enumerate(data["artifacts"]):
+        with open(f'./out/{image["seed"]}.png', "wb") as f:
+            f.write(base64.b64decode(image["base64"]))
+
+    show_image("seed")
+
+
+def show_image(seed):
+    new_window = Toplevel()
+    new_window.title("Display PNG Image")
+
+    img = Image.open(f'./out/{int(seed)}.png')
+    img = img.resize((512, 512), Image.LANCZOS)
+    img_tk = ImageTk.PhotoImage(img)
+
+    image_label = Label(new_window, image=img_tk)
+    image_label.image = img_tk
+    image_label.grid(column=0, row=10, columnspan=2)
+
+    new_window.mainloop()
+
