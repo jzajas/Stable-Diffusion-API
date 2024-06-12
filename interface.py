@@ -1,18 +1,18 @@
 from tkinter import *
 from backend import api_call, show_image
+import random
+import glob
+import os
 
 FONT_NAME = "Arial"
 FONT = (FONT_NAME, 15)
 options = ["enhance", "anime", "cinematic", "digital-art", "comic-book", "fantasy-art", "line-art", "analog-film",
            "neon-punk", "isometric", "low-poly", "origami", "modeling-compound", "3d-model", "pixel-art",
            "tile-texture"]
-NAME = 200256006
 
 
 class Interface:
     def __init__(self):
-
-        self.NAME = NAME
 
         self.window = Tk()
         self.window.title("Image Generator Api Interface")
@@ -36,7 +36,7 @@ class Interface:
         self.seed_label.grid(column=0, row=3)
         self.seed_entry = Entry(width=25, font=FONT)
         self.seed_entry.grid(column=1, row=3)
-        self.seed_entry.insert(0, "0")
+        self.seed_entry.insert(0, self.random_seed)
 
         self.steps_label = Label(text="Steps:", font=FONT)
         self.steps_label.grid(column=0, row=4)
@@ -82,7 +82,7 @@ class Interface:
         )
 
     def show_image_button(self):
-        seed = self.NAME
+        seed = self.get_seed()
         show_image(seed)
 
     def get_steps(self):
@@ -105,3 +105,14 @@ class Interface:
 
     def get_prompt(self):
         return self.prompt_entry.get()
+
+    def random_seed(self):
+        random_int = random.randint(0, 9999999999)
+        files = glob.glob(os.path.join("./out", '*'))
+        filenames = [os.path.basename(file) for file in files]
+        filenames_without_extension = [os.path.splitext(file)[0] for file in filenames]
+
+        if str(random_int) in filenames_without_extension:
+            self.random_seed()
+
+        return str(random_int)
