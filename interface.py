@@ -1,8 +1,6 @@
 from tkinter import *
-from backend import api_call, show_image
-import random
-import glob
-import os
+from backend import api_call, show_image, open_folder, random_seed
+
 
 FONT_NAME = "Arial"
 FONT = (FONT_NAME, 15)
@@ -36,7 +34,7 @@ class Interface:
         self.seed_label.grid(column=0, row=3)
         self.seed_entry = Entry(width=25, font=FONT)
         self.seed_entry.grid(column=1, row=3)
-        self.seed_entry.insert(0, self.random_seed)
+        self.seed_entry.insert(0, random_seed())
 
         self.steps_label = Label(text="Steps:", font=FONT)
         self.steps_label.grid(column=0, row=4)
@@ -65,8 +63,8 @@ class Interface:
         self.generate_button = Button(text="Generate", command=self.api_call, width=50, font=FONT)
         self.generate_button.grid(column=0, row=8, columnspan=2)
 
-        self.show_image_button = Button(text="Show Image", command=self.show_image_button, width=50, font=FONT)
-        self.show_image_button.grid(column=0, row=9, columnspan=2)
+        self.show_images_button = Button(text="Show Images", command=open_folder, width=50, font=FONT)
+        self.show_images_button.grid(column=0, row=9, columnspan=2)
 
         self.window.mainloop()
 
@@ -105,14 +103,3 @@ class Interface:
 
     def get_prompt(self):
         return self.prompt_entry.get()
-
-    def random_seed(self):
-        random_int = random.randint(0, 9999999999)
-        files = glob.glob(os.path.join("./out", '*'))
-        filenames = [os.path.basename(file) for file in files]
-        filenames_without_extension = [os.path.splitext(file)[0] for file in filenames]
-
-        if str(random_int) in filenames_without_extension:
-            self.random_seed()
-
-        return str(random_int)

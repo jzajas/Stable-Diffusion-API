@@ -1,9 +1,11 @@
 import base64
 import requests
+import random
+import glob
 import os
 from tkinter import *
 from PIL import Image, ImageTk
-import glob
+import subprocess
 
 URL = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
 API_KEY = os.environ['STABILITY_KEY']
@@ -50,23 +52,19 @@ def api_call(steps, width, height, seed, cfg_scale, style_preset, text_prompt):
     if not os.path.exists("./out"):
         os.makedirs("./out")
 
-    # try:
     for i, image in enumerate(data["artifacts"]):
         with open(f'./out/{body["seed"]}.png', "wb") as f:
             f.write(base64.b64decode(image["base64"]))
-    # except KeyError:
-    #     body["seed"] = find_seed("./out")
 
     show_image(body["seed"])
 
 
 def show_image(seed):
-    print(seed)
     new_window = Toplevel()
     new_window.title("Display PNG Image")
 
     img = Image.open(f'./out/{int(seed)}.png')
-    img = img.resize((512, 512), Image.LANCZOS)
+    # img = img.resize((1024, 512), Image.LANCZOS)
     img_tk = ImageTk.PhotoImage(img)
 
     image_label = Label(new_window, image=img_tk)
@@ -76,14 +74,21 @@ def show_image(seed):
     new_window.mainloop()
 
 
-def find_seed(folder_path):
-    files = glob.glob(os.path.join(folder_path, '*'))
+def random_seed():
+    random_int = random.randint(0, 9999999999)
+    files = glob.glob(os.path.join("./out", '*.png'))
+    file_name = f"{random_int}.png"
+    filenames = [os.path.basename(file) for file in files]
 
-    if not files:
-        return None
+    if str(file_name) in filenames:
+        random_seed()
 
-    most_recent_file = max(files, key=os.path.getmtime)
-    most_recent_filename = os.path.basename(most_recent_file)
-    most_recent_filename_without_extension = os.path.splitext(most_recent_filename)[0]
+    return int(random_int)
 
-    return most_recent_filename_without_extension
+
+def open_folder():
+    folder_path = os.path.abspath('./out')
+    if not os.path.exists(folder_path):
+        os.makedirs("./out")
+
+    subprocess.Popen(['explorer', folder_path])
