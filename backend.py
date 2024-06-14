@@ -1,4 +1,6 @@
 import base64
+import configparser
+
 import requests
 import random
 import glob
@@ -8,10 +10,11 @@ from PIL import Image, ImageTk
 import subprocess
 
 URL = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
-API_KEY = os.environ['STABILITY_KEY']
+CONFIG_FILE = 'config.ini'
+# API_KEY = os.environ['STABILITY_KEY']
 
 
-def api_call(steps, width, height, seed, cfg_scale, style_preset, text_prompt):
+def api_call(steps, width, height, seed, cfg_scale, style_preset, text_prompt, API_KEY):
     body = {
         "steps": int(steps),
         "width": int(width),
@@ -45,6 +48,7 @@ def api_call(steps, width, height, seed, cfg_scale, style_preset, text_prompt):
     )
 
     if response.status_code != 200:
+        print(f"HTTP {response.status_code}: {response.text}")
         raise Exception("Non-200 response: " + str(response.text))
 
     data = response.json()
@@ -75,7 +79,7 @@ def show_image(seed):
 
 
 def random_seed():
-    random_int = random.randint(0, 9999999999)
+    random_int = random.randint(0, 2147483647)
     files = glob.glob(os.path.join("./out", '*.png'))
     file_name = f"{random_int}.png"
     filenames = [os.path.basename(file) for file in files]
@@ -92,3 +96,19 @@ def open_folder():
         os.makedirs("./out")
 
     subprocess.Popen(['explorer', folder_path])
+
+
+def save_api_key(api_key):
+    if api_key:
+        config = configparser.ConfigParser()
+        config['DEFAULT'] = {'API_KEY': api_key}
+        with open(CONFIG_FILE, 'w') as configfile:
+            config.write(configfile)
+
+
+def load_api_key():
+    if os.path.exists(CONFIG_FILE):
+        config = configparser.ConfigParser()
+        config.read(CONFIG_FILE)
+        api_key = config['DEFAULT'].get('API_KEY', '')
+        return api_key
